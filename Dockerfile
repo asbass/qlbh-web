@@ -1,16 +1,10 @@
-# Giai đoạn 1: Dùng Node để build Angular
-FROM node:18 AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-# Lệnh này sẽ tạo ra thư mục dist/ltw-frontend
-RUN npm run build 
-
-# Giai đoạn 2: Đưa code đã build vào Nginx để chạy
+# Sử dụng Nginx làm server để chạy các file web tĩnh
 FROM nginx:alpine
-# Copy từ "build" (giai đoạn 1) sang Nginx
-# Đảm bảo đường dẫn này khớp với cấu hình trong angular.json của bạn
-COPY --from=build /app/dist/ltw-frontend /usr/share/nginx/html
+
+# Copy toàn bộ nội dung trong thư mục frontend của bạn vào thư mục phục vụ của Nginx
+# Lưu ý: Hãy đảm bảo thư mục 'frontend' chứa file 'index.html' của bạn
+COPY ./frontend /usr/share/nginx/html
+
+# Mở cổng 80 để truy cập web
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
