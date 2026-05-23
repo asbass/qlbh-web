@@ -23,3 +23,20 @@ jobs:
           push: true
           # Thay tên image cho Frontend để không bị đè lên Backend
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/frontend-ltw:latest
+      - name: Update Kubernetes manifests
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          
+          # Clone repo k8s
+          git clone https://${{ secrets.GIT_PAT }}@github.com/asbass/k8s.git
+          
+          # Sửa file deployment.yaml (Đảm bảo đường dẫn này đúng với thư mục trong repo k8s của bạn)
+          # Lưu ý: Sửa 'taibaton/ltw:latest' thành image của bạn
+          sed -i "s|image:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/ltw:latest|g" k8s/backend/deployment.yaml
+          
+          # Đẩy thay đổi về repo k8s
+          cd k8s
+          git add .
+          git commit -m "Auto-update image tag"
+          git push
