@@ -31,12 +31,17 @@ jobs:
           # Clone repo k8s
           git clone https://${{ secrets.GIT_PAT }}@github.com/asbass/k8s.git
           
-          # Sửa file deployment.yaml (Đảm bảo đường dẫn này đúng với thư mục trong repo k8s của bạn)
-          # Lưu ý: Sửa 'taibaton/ltw:latest' thành image của bạn
+          # Sửa file deployment.yaml
+          # Lệnh sed này sẽ thay thế image sau dấu :
           sed -i "s|image:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/ltw:latest|g" k8s/backend/deployment.yaml
           
-          # Đẩy thay đổi về repo k8s
+          # Kiểm tra xem có thay đổi thật sự hay không
           cd k8s
-          git add .
-          git commit -m "Auto-update image tag"
-          git push
+          if [ -n "$(git status --porcelain)" ]; then
+            git add backend/deployment.yaml
+            git commit -m "Auto-update image tag to ${{ secrets.DOCKERHUB_USERNAME }}/ltw:latest"
+            git push
+            echo "Đã cập nhật thành công repo k8s!"
+          else
+            echo "Không có thay đổi nào trong file deployment.yaml, không cần commit."
+          fi
