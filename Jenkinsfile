@@ -1,9 +1,5 @@
 pipeline {
     agent any
-    // Chúng ta cần Node.js để build AngularJS
-    tools {
-        nodejs 'Node-18' // Hãy chắc chắn bạn đã cài "NodeJS Plugin" và đặt tên này trong Global Tool Config
-    }
     environment {
         DOCKERHUB_USER = 'taibaton'
         IMAGE_NAME = "${DOCKERHUB_USER}/frontend"
@@ -15,20 +11,16 @@ pipeline {
         stage('Checkout') {
             steps {
                 cleanWs()
+                // Thay URL github của bạn vào đây
                 git branch: 'main', credentialsId: 'github-pat-credentials-id', url: 'https://github.com/asbass/qlbh-web.git'
             }
         }
         
-        stage('Build Frontend & Docker') {
+        stage('Build & Push Docker') {
             steps {
                 script {
-                    echo "--- Cài đặt thư viện Node ---"
-                    sh 'npm install'
-                    
-                    echo "--- Build code AngularJS (tạo thư mục dist) ---"
-                    sh 'npm run build' // Đảm bảo trong package.json của bạn có script này
-                    
-                    echo "--- Build Docker Image ---"
+                    echo "--- Build Docker Image trực tiếp từ source ---"
+                    // Docker sẽ tự copy toàn bộ file trong workspace vào Nginx
                     sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} -t ${IMAGE_NAME}:latest ."
                     
                     echo "--- Push lên DockerHub ---"
@@ -42,7 +34,7 @@ pipeline {
             }
         }
 
-        stage('Update K8s Repo (GitOps)') {
+        stage('Update K8s') {
             steps {
                 sshagent([GIT_CREDS]) {
                     sh '''
@@ -50,10 +42,8 @@ pipeline {
                         git clone git@github.com:asbass/k8s.git
                         cd k8s
                         sed -i "s|image: ${DOCKERHUB_USER}/frontend:.*|image: ${IMAGE_NAME}:${BUILD_NUMBER}|g" frontend/deployment.yaml
-                        git config user.email "jenkins@jenkins.com"
-                        git config user.name "Jenkins"
                         git add frontend/deployment.yaml
-                        git commit -m "Update frontend image to ${BUILD_NUMBER}"
+                        git commit -m "Update frontend image ${BUILD_NUMBER}"
                         git push origin main
                     '''
                 }
